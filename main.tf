@@ -2,7 +2,7 @@ module "aap_instance" {
   source = "./aap_instance"
 
   # Required variables
-  ami_id            = var.ami_id
+  ami_id            = data.hcp_packer_artifact.rhel9_aap.external_identifier
   acme_email        = var.acme_email
   domain_name       = var.domain_name
   route53_zone_name = var.route53_zone_name
@@ -14,7 +14,8 @@ module "aap_instance" {
 }
 
 module "vault_ssh" {
-  source = "./vault_ssh"
+  source     = "./vault_ssh"
+  depends_on = [vault_mount.aap_kv]
 
   # Required variables
   namespace          = var.vault_namespace
@@ -24,6 +25,7 @@ module "vault_ssh" {
   auth_backend_approle_path = var.auth_backend_approle_path
   tenant                    = var.tenant
   approle_mount_accessor    = var.approle_mount_accessor
+  kvv2_mount_path           = var.kvv2_mount_path
 }
 
 module "aap_postinstall" {

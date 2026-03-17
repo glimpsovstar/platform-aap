@@ -16,7 +16,11 @@ provider "tls" {
 
 
 provider "aap" {
-  host                 = local.aap_url 
+  host                 = local.aap_url
   insecure_skip_verify = true
   timeout              = 300
+}
+
+provider "hcp" {
+  # Authenticates via HCP_CLIENT_ID and HCP_CLIENT_SECRET environment variables
 }

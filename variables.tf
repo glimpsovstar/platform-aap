@@ -3,11 +3,6 @@ variable "aws_region" {
   default = "ap-southeast-2"
 }
 
-variable "ami_id" {
-  type    = string
-  default = "ami-0a7aa287b266aba68"
-}
-
 variable "create_alb" {
   description = "Whether to create ALB, ACME certificate, and Route53 resources"
   type        = bool
@@ -77,7 +72,7 @@ variable "vault_namespace" {
 variable "auth_backend_approle_path" {
   description = "Auth backend approle path for Vault"
   type        = string
-  default     = "approle"
+  default     = "approle-ssh"
 }
 
 # variable "ssh_role_name" {
@@ -90,5 +85,11 @@ variable "auth_backend_approle_path" {
 variable "approle_mount_accessor" {
   description = "Mount accessor for the AppRole authentication backend"
   type        = string
-  default     = "auth_approle_b0d54875"
+  default     = "auth_approle_3170b449"
+}
+
+variable "kvv2_mount_path" {
+  description = "Path for the KV v2 secrets engine used by the AAP demo"
+  type        = string
+  default     = "aap-kv"
 }

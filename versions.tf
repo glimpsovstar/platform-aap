@@ -30,15 +30,20 @@ terraform {
       version = "~> 1.2"
     }
 
+    hcp = {
+      source  = "hashicorp/hcp"
+      version = "~> 0.94"
+    }
+
   }
   required_version = ">= 1.11.0"
 
   cloud {
 
-    organization = "Hashi-RedHat-APJ-Collab"
+    organization = "djoo-hashicorp"
 
     workspaces {
-      name = "aap-demo-test"
+      name = "aap-demo"
     }
   }
 
