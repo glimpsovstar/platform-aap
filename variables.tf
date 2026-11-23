@@ -93,3 +93,15 @@ variable "kvv2_mount_path" {
   type        = string
   default     = "aap-kv"
 }
+
+variable "aap_instance_type" {
+  description = "EC2 type for the AAP controller. Changing it stops and starts the instance."
+  type        = string
+  default     = "m6a.xlarge"
+}
+
+variable "aap_ssh_allowed_cidrs" {
+  description = "CIDRs allowed to SSH to the AAP instance. Empty means no inbound SSH."
+  type        = list(string)
+  default     = []
+}
