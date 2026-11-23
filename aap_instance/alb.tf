@@ -1,28 +1,40 @@
-# ACME Certificate Resources
-resource "acme_registration" "reg" {
-  count         = var.create_alb ? 1 : 0
-  email_address = var.acme_email
-}
-
-resource "acme_certificate" "cert" {
+# TLS certificate for the ALB, issued by ACM and validated through Route53.
+# ACM renews it automatically while it is in use and the validation record stays.
+# (Replaced a Let's Encrypt certificate imported into ACM, which only renewed when
+# someone ran terraform apply and expired on 2026-11-22.)
+resource "aws_acm_certificate" "aap" {
   count                     = var.create_alb ? 1 : 0
-  account_key_pem           = acme_registration.reg[0].account_key_pem
-  common_name               = var.domain_name
+  domain_name               = var.domain_name
   subject_alternative_names = var.subject_alternative_names
+  validation_method         = "DNS"
 
-  dns_challenge {
-    provider = "route53"
-    config = {
-      AWS_DEFAULT_REGION         = var.aws_region
-    }
+  tags = {
+    Name      = var.domain_name
+    Terraform = "true"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
-resource "aws_acm_certificate" "cert" {
-  count             = var.create_alb ? 1 : 0
-  private_key       = acme_certificate.cert[0].private_key_pem
-  certificate_body  = acme_certificate.cert[0].certificate_pem
-  certificate_chain = acme_certificate.cert[0].issuer_pem
+resource "aws_route53_record" "aap_cert_validation" {
+  for_each = var.create_alb ? {
+    for o in aws_acm_certificate.aap[0].domain_validation_options : o.domain_name => o
+  } : {}
+
+  zone_id         = data.aws_route53_zone.hashidemos_zone[0].id
+  name            = each.value.resource_record_name
+  type            = each.value.resource_record_type
+  records         = [each.value.resource_record_value]
+  ttl             = 60
+  allow_overwrite = true
+}
+
+resource "aws_acm_certificate_validation" "aap" {
+  count                   = var.create_alb ? 1 : 0
+  certificate_arn         = aws_acm_certificate.aap[0].arn
+  validation_record_fqdns = [for r in aws_route53_record.aap_cert_validation : r.fqdn]
 }
 
 # ALB Security Group
@@ -104,7 +116,7 @@ resource "aws_lb_listener" "https" {
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.cert[0].arn
+  certificate_arn   = aws_acm_certificate_validation.aap[0].certificate_arn
 
   default_action {
     type             = "forward"
