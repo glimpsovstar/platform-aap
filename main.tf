@@ -11,6 +11,8 @@ module "aap_instance" {
   aws_region                = var.aws_region
   create_alb                = var.create_alb
   subject_alternative_names = var.subject_alternative_names
+  instance_type             = var.aap_instance_type
+  ssh_allowed_cidrs         = var.aap_ssh_allowed_cidrs
 }
 
 module "vault_ssh" {

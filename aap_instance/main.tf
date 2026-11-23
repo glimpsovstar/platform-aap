@@ -100,64 +100,27 @@ resource "aws_security_group" "aap_security_group" {
   }
 }
 
-resource "aws_security_group_rule" "http_ingress_access" {
-  type              = "ingress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.aap_security_group.id
-}
+# Inbound is limited to what AAP needs from outside the VPC. PostgreSQL (5432), Redis (6379),
+# receptor (50051), 80 and 8433 were open to 0.0.0.0/0 and are removed. Users, HCP Terraform and
+# webhooks reach AAP through the ALB (alb_to_instance in alb.tf).
 
+# SSH only from the admin CIDRs in var.ssh_allowed_cidrs; no rule at all when the list is empty.
 resource "aws_security_group_rule" "ssh_ingress_access" {
+  count             = length(var.ssh_allowed_cidrs) > 0 ? 1 : 0
   type              = "ingress"
   from_port         = 22
   to_port           = 22
   protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.ssh_allowed_cidrs
   security_group_id = aws_security_group.aap_security_group.id
 }
 
-resource "aws_security_group_rule" "postgresql_ingress_access" {
-  type              = "ingress"
-  from_port         = 5432
-  to_port           = 5432
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.aap_security_group.id
-}
-
-resource "aws_security_group_rule" "redis_ingress_access" {
-  type              = "ingress"
-  from_port         = 6379
-  to_port           = 6379
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.aap_security_group.id
-}
-
-resource "aws_security_group_rule" "secure_ingress_access" {
-  type              = "ingress"
-  from_port         = 8433
-  to_port           = 8433
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.aap_security_group.id
-}
-
+# Direct HTTPS only when there is no ALB in front.
 resource "aws_security_group_rule" "https_ingress_access" {
+  count             = var.create_alb ? 0 : 1
   type              = "ingress"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.aap_security_group.id
-}
-
-resource "aws_security_group_rule" "grpc_ingress_access" {
-  type              = "ingress"
-  from_port         = 50051
-  to_port           = 50051
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.aap_security_group.id
@@ -173,12 +136,18 @@ resource "aws_security_group_rule" "egress_access" {
 }
 
 resource "aws_instance" "aap_instance" {
-  instance_type               = "m6a.xlarge"
+  instance_type               = var.instance_type
   vpc_security_group_ids      = [aws_security_group.aap_security_group.id]
   associate_public_ip_address = true
   key_name                    = module.key_pair.key_pair_name
   ami                         = var.ami_id
   subnet_id                   = aws_subnet.aap_public_subnet_az1.id
+
+  # IMDSv2 only. Changed in place, no restart.
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
 
   tags = {
     Name      = "aap-controller-az1"

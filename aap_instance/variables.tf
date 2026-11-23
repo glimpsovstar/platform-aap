@@ -34,4 +34,16 @@ variable "subject_alternative_names" {
 variable "route53_zone_name" {
   description = "The name of the Route 53 hosted zone to use (must end with a dot)"
   type        = string
-} 
+}
+
+variable "instance_type" {
+  description = "EC2 type for the AAP controller. Changing it stops and starts the instance."
+  type        = string
+  default     = "m6a.xlarge"
+}
+
+variable "ssh_allowed_cidrs" {
+  description = "CIDRs allowed to SSH to the AAP instance. Empty means no inbound SSH."
+  type        = list(string)
+  default     = []
+}
